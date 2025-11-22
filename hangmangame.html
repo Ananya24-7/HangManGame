@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hangman Game</title>
+    <!-- Google Font -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
+
+    <!-- CSS Styles -->
+    <style>
+        /* --- Dracula Theme Palette --- */
+        
+         :root {
+            --background: #282a36;
+            --foreground: #f8f8f2;
+            --comment: #6272a4;
+            --cyan: #8be9fd;
+            --green: #50fa7b;
+            --orange: #ffb86c;
+            --pink: #ff79c6;
+            --purple: #bd93f9;
+            --red: #ff5555;
+            --yellow: #f1fa8c;
+        }
+        
+        body {
+            background-color: var(--background);
+            color: var(--foreground);
+            font-family: 'Orbitron', sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            text-align: center;
+        }
+        
+        .game-container {
+            background-color: #44475a;
+            padding: 2rem;
+            border-radius: 15px;
+            box-shadow: 0 0 30px rgba(189, 147, 249, 0.3);
+            width: 90%;
+            max-width: 600px;
+        }
+        
+        h1 {
+            color: var(--purple);
+            font-weight: 900;
+            letter-spacing: 2px;
+            margin-bottom: 1rem;
+        }
+        
+        .hangman-container svg {
+            filter: drop-shadow(0 0 10px var(--comment));
+        }
+        
+        .hangman-container .part {
+            opacity: 0;
+            transition: opacity 0.5s ease-in-out;
+        }
+        
+        .hangman-container .part.visible {
+            opacity: 1;
+        }
+        
+        #hint-display {
+            color: var(--comment);
+            font-style: italic;
+            min-height: 24px;
+        }
+        
+        #word-container {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin: 1.5rem 0;
+            flex-wrap: wrap;
+        }
+        
+        #word-container span {
+            font-size: 2.5rem;
+            font-weight: 700;
+            border-bottom: 3px solid var(--foreground);
+            width: 40px;
+            height: 50px;
+            display: inline-flex;
+            justify-content: center;
+            align-items: center;
+            color: var(--cyan);
+            animation: pop-in 0.4s ease-out;
+        }
+        
+        @keyframes pop-in {
+            0% {
+                transform: scale(0.8);
+                opacity: 0;
+            }
+            80% {
+                transform: scale(1.05);
+            }
+            100% {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+        
+        #keyboard {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(45px, 1fr));
+            gap: 8px;
+            margin-top: 1.5rem;
+        }
+        
+        .key-button {
+            background-color: var(--comment);
+            color: var(--foreground);
+            border: none;
+            border-radius: 5px;
+            padding: 15px 5px;
+            font-size: 1.2rem;
+            font-family: 'Orbitron', sans-serif;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: 0 4px #3a3d4e;
+        }
+        
+        .key-button:hover:not(:disabled) {
+            background-color: var(--cyan);
+            color: var(--background);
+            transform: translateY(-2px);
+            box-shadow: 0 6px #3a3d4e;
+        }
+        
+        .key-button:active:not(:disabled) {
+            transform: translateY(2px);
+            box-shadow: 0 2px #3a3d4e;
+        }
+        
+        .key-button:disabled {
+            cursor: not-allowed;
+            opacity: 0.6;
+        }
+        
+        .key-button.correct {
+            background-color: var(--green);
+        }
+        
+        .key-button.wrong {
+            background-color: var(--red);
+        }
+        
+        #message-container {
+            margin-top: 1.5rem;
+            min-height: 50px;
+        }
+        
+        #message {
+            font-size: 1.8rem;
+            font-weight: 700;
+            opacity: 0;
+            transform: scale(0.8);
+            transition: all 0.5s ease;
+        }
+        
+        #message.show {
+            opacity: 1;
+            transform: scale(1);
+        }
+        
+        #message.win {
+            color: var(--green);
+            text-shadow: 0 0 10px var(--green);
+        }
+        
+        #message.lose {
+            color: var(--red);
+            text-shadow: 0 0 10px var(--red);
+        }
+        
+        #play-again {
+            background-color: var(--purple);
+            color: var(--background);
+            border: none;
+            border-radius: 50px;
+            padding: 12px 25px;
+            font-size: 1.2rem;
+            font-family: 'Orbitron', sans-serif;
+            font-weight: 700;
+            cursor: pointer;
+            margin-top: 1rem;
+            transition: all 0.3s ease;
+        }
+        
+        #play-again:hover {
+            background-color: var(--pink);
+            transform: scale(1.05);
+            box-shadow: 0 0 15px var(--pink);
+        }
+        
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="game-container">
+        <h1>Hangman</h1>
+
+        <div class="hangman-container">
+            <svg height="250" width="200">
+                <!-- Gallows -->
+                <line x1="10" y1="230" x2="150" y2="230" stroke="#f8f8f2" stroke-width="4"/>
+                <line x1="50" y1="230" x2="50" y2="20" stroke="#f8f8f2" stroke-width="4"/>
+                <line x1="50" y1="20" x2="130" y2="20" stroke="#f8f8f2" stroke-width="4"/>
+                <line x1="130" y1="20" x2="130" y2="50" stroke="#f8f8f2" stroke-width="4"/>
+                
+                <!-- Head -->
+                <circle id="head" cx="130" cy="70" r="20" stroke="#ff5555" stroke-width="4" fill="none" class="part"/>
+                <!-- Body -->
+                <line id="body" x1="130" y1="90" x2="130" y2="150" stroke="#ff5555" stroke-width="4" class="part"/>
+                <!-- Left Arm -->
+                <line id="l-arm" x1="130" y1="110" x2="100" y2="130" stroke="#ff5555" stroke-width="4" class="part"/>
+                <!-- Right Arm -->
+                <line id="r-arm" x1="130" y1="110" x2="160" y2="130" stroke="#ff5555" stroke-width="4" class="part"/>
+                <!-- Left Leg -->
+                <line id="l-leg" x1="130" y1="150" x2="110" y2="190" stroke="#ff5555" stroke-width="4" class="part"/>
+                <!-- Right Leg -->
+                <line id="r-leg" x1="130" y1="150" x2="150" y2="190" stroke="#ff5555" stroke-width="4" class="part"/>
+            </svg>
+        </div>
+
+        <div class="game-info">
+            <p id="hint-display">Hint: Loading...</p>
+            <div id="word-container"></div>
+        </div>
+
+        <div id="keyboard"></div>
+
+        <div id="message-container">
+            <p id="message"></p>
+        </div>
+
+        <button id="play-again" class="hidden">Play Again</button>
+    </div>
+
+    <!-- JavaScript Logic -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // --- DOM Elements ---
+            const wordContainer = document.getElementById('word-container');
+            const keyboardContainer = document.getElementById('keyboard');
+            const hintDisplay = document.getElementById('hint-display');
+            const messageEl = document.getElementById('message');
+            const playAgainBtn = document.getElementById('play-again');
+            const hangmanParts = document.querySelectorAll('.part');
+
+            // --- Game State ---
+            const wordList = [{
+                word: 'JAVASCRIPT',
+                hint: 'A popular programming language for the web.'
+            }, {
+                word: 'GITHUB',
+                hint: 'A platform for hosting and collaborating on code.'
+            }, {
+                word: 'DRACULA',
+                hint: 'A famous vampire and a popular dark theme.'
+            }, {
+                word: 'ANIMATION',
+                hint: 'The process of making the illusion of motion.'
+            }, {
+                word: 'DEVELOPER',
+                hint: 'A person who builds and creates software.'
+            }];
+
+            let selectedWord = '';
+            let selectedHint = '';
+            let guessedLetters = [];
+            let remainingGuesses = 6;
+            let gameOver = false;
+
+            // --- Functions ---
+
+            /**
+             * Initializes or resets the game to its starting state.
+             */
+            const initGame = () => {
+                // Reset state
+                gameOver = false;
+                remainingGuesses = 6;
+                guessedLetters = [];
+
+                // Reset UI
+                messageEl.classList.remove('show', 'win', 'lose');
+                playAgainBtn.classList.add('hidden');
+                hangmanParts.forEach(part => part.classList.remove('visible'));
+
+                // Select a random word
+                const randomIndex = Math.floor(Math.random() * wordList.length);
+                selectedWord = wordList[randomIndex].word;
+                selectedHint = wordList[randomIndex].hint;
+
+                // Update display
+                hintDisplay.textContent = `Hint: ${selectedHint}`;
+                createWordDisplay();
+                createKeyboard();
+            };
+
+            /**
+             * Creates the display for the word to be guessed (with blanks).
+             */
+            const createWordDisplay = () => {
+                wordContainer.innerHTML = '';
+                selectedWord.split('').forEach(letter => {
+                    const span = document.createElement('span');
+                    span.textContent = '_';
+                    wordContainer.appendChild(span);
+                });
+            };
+
+            /**
+             * Generates the on-screen keyboard.
+             */
+            const createKeyboard = () => {
+                keyboardContainer.innerHTML = '';
+                for (let i = 65; i <= 90; i++) {
+                    const letter = String.fromCharCode(i);
+                    const button = document.createElement('button');
+                    button.classList.add('key-button');
+                    button.textContent = letter;
+                    button.id = `key-${letter}`;
+                    button.addEventListener('click', () => handleGuess(letter));
+                    keyboardContainer.appendChild(button);
+                }
+            };
+
+            /**
+             * Handles a letter guess from the player.
+             * @param {string} letter - The guessed letter.
+             */
+            const handleGuess = (letter) => {
+                if (gameOver || guessedLetters.includes(letter)) {
+                    return;
+                }
+
+                guessedLetters.push(letter);
+                const button = document.getElementById(`key-${letter}`);
+                button.disabled = true;
+
+                if (selectedWord.includes(letter)) {
+                    button.classList.add('correct');
+                    updateWordDisplay();
+                    checkWin();
+                } else {
+                    button.classList.add('wrong');
+                    remainingGuesses--;
+                    updateHangmanDrawing();
+                    checkLoss();
+                }
+            };
+
+            /**
+             * Updates the word display to reveal correctly guessed letters.
+             */
+            const updateWordDisplay = () => {
+                const spans = wordContainer.querySelectorAll('span');
+                selectedWord.split('').forEach((letter, index) => {
+                    if (guessedLetters.includes(letter)) {
+                        spans[index].textContent = letter;
+                    }
+                });
+            };
+
+            /**
+             * Reveals the next part of the hangman drawing.
+             */
+            const updateHangmanDrawing = () => {
+                const partIndex = 6 - remainingGuesses - 1; // 0-based index
+                if (partIndex >= 0 && partIndex < hangmanParts.length) {
+                    hangmanParts[partIndex].classList.add('visible');
+                }
+            };
+
+            /**
+             * Checks if the player has won the game.
+             */
+            const checkWin = () => {
+                const hasWon = selectedWord.split('').every(letter => guessedLetters.includes(letter));
+                if (hasWon) {
+                    endGame(true);
+                }
+            };
+
+            /**
+             * Checks if the player has lost the game.
+             */
+            const checkLoss = () => {
+                if (remainingGuesses === 0) {
+                    endGame(false);
+                }
+            };
+
+            /**
+             * Ends the game, displays a message, and shows the play again button.
+             * @param {boolean} isWin - True if the player won, false otherwise.
+             */
+            const endGame = (isWin) => {
+                gameOver = true;
+                messageEl.textContent = isWin ? '🎉 You Win! 🎉' : `💀 Game Over! The word was ${selectedWord}.`;
+                messageEl.classList.add(isWin ? 'win' : 'lose', 'show');
+                playAgainBtn.classList.remove('hidden');
+
+                // Reveal the word on loss
+                if (!isWin) {
+                    updateWordDisplay();
+                }
+            };
+
+            // --- Event Listeners ---
+            playAgainBtn.addEventListener('click', initGame);
+
+            // --- Initial Game Start ---
+            initGame();
+        });
+    </script>
+</body>
+
+</html>
